@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Done</h1>
+<div class="card">
+  <ul>{% for m in result.messages %}<li>{{ m }}</li>{% endfor %}</ul>
+</div>
+{% if result.backup_ids %}
+<p>Changed something by mistake? <a href="/backups">Restore from a backup</a>.</p>
+{% endif %}
+<div class="actions"><a class="btn secondary" href="/">Back to playlists</a></div>
+{% endblock %}

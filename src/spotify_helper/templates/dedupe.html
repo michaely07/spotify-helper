@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_macros.html" import track_cell, tier_badge, duration %}
+{% block content %}
+<h1>Duplicates in “{{ playlist.name }}”</h1>
+<p class="sub">{{ groups|length }} group{{ "" if groups|length == 1 else "s" }} found in {{ playlist.total }} tracks. Pick which copy to keep in each group; the album version is pre-selected.</p>
+{% if groups %}
+<form method="post">
+  <input type="hidden" name="snapshot_id" value="{{ playlist.snapshot_id }}">
+  {% for g in groups %}{% set gi = loop.index0 %}
+  <div class="card group">
+    <div class="group-head">
+      <label><input type="checkbox" name="include" value="{{ gi }}" checked> <strong>Clean up this group</strong></label>
+      {{ tier_badge(g.tier) }}
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Keep</th><th>Track</th><th>Length</th><th>Added</th><th>Match</th></tr></thead>
+      <tbody>
+      {% for m in g.members %}
+      <tr>
+        <td><input type="radio" name="keep_{{ gi }}" value="{{ m.position }}" {% if m is sameas g.keeper %}checked{% endif %} aria-label="Keep this copy"></td>
+        <td>{{ track_cell(m.track) }}</td>
+        <td>{{ duration(m.track.duration_ms) }}</td>
+        <td class="muted">{{ m.added_at[:10] }}</td>
+        <td>{% if m is sameas g.keeper %}<span class="badge muted">suggested</span>{% else %}{{ tier_badge(g.tiers[m.position]) }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+  {% endfor %}
+  <p class="muted">Local files can't be removed through Spotify's API and are always kept.</p>
+  <div class="actions"><button class="btn">Preview changes</button><a class="btn secondary" href="/">Cancel</a></div>
+</form>
+{% else %}
+<div class="card">No duplicates. Nice and tidy.</div>
+{% endif %}
+{% endblock %}

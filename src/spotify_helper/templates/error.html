@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Something needs attention</h1>
+<div class="card error"><p>{{ message }}</p></div>
+<div class="actions"><a class="btn secondary" href="javascript:history.back()">Go back</a><a class="btn secondary" href="/">Home</a></div>
+{% endblock %}

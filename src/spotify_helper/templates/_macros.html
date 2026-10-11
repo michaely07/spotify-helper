@@ -1,0 +1,31 @@
+{% macro track_cell(t) -%}
+<div class="track">
+  {% if t.image_url %}<img src="{{ t.image_url }}" alt="" loading="lazy">{% else %}<span class="noart"></span>{% endif %}
+  <div>
+    <div class="t-name">{{ t.name }}{% if t.is_local %} <span class="badge muted">local file</span>{% endif %}</div>
+    <div class="t-meta">{{ t.artist_line }}{% if t.album_name %} · {{ t.album_name }}{% endif %}{% if t.album_type %} <span class="badge muted">{{ t.album_type }}</span>{% endif %}</div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro tier_badge(tier) -%}
+{% if tier %}<span class="badge {{ tier.name|lower }}">{{ tier.label }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro duration(ms) -%}{{ (ms // 60000) }}:{{ "%02d"|format((ms // 1000) % 60) }}{%- endmacro %}
+
+{% macro playlist_checklist(playlists, name, checked_ids=(), exclude=None) -%}
+<div class="checklist">
+  {% for p in playlists if p.id != exclude %}
+  <label><input type="checkbox" name="{{ name }}" value="{{ p.id }}" {% if p.id in checked_ids %}checked{% endif %}>
+    {{ p.name }} <span class="muted">({{ p.total }})</span></label>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro playlist_select(playlists, name, selected=None, placeholder="Choose a playlist") -%}
+<select name="{{ name }}" required>
+  <option value="">{{ placeholder }}</option>
+  {% for p in playlists %}<option value="{{ p.id }}" {% if selected and p.id == selected.id %}selected{% endif %}>{{ p.name }} ({{ p.total }})</option>{% endfor %}
+</select>
+{%- endmacro %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "_macros.html" import playlist_checklist %}
+{% block content %}
+<h1>Merge playlists</h1>
+<p class="sub">Combine several playlists into a new private one. Duplicates (any version) are kept only once, in the order the playlists are listed.</p>
+<form method="post" class="card">
+  <p><label>New playlist name<br><input type="text" name="name" required maxlength="100" placeholder="e.g. Everything chill"></label></p>
+  {{ playlist_checklist(editable, "ids") }}
+  <div class="actions"><button class="btn">Preview merge</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import track_cell %}
+{% block content %}
+<h1>Review: {{ plan.title }}</h1>
+<p class="sub">Nothing has changed yet. Every playlist below is backed up automatically before it's edited.</p>
+{% for n in plan.notes %}<div class="notice">{{ n }}</div>{% endfor %}
+{% set ns = namespace(count=0) %}
+{% for c in plan.changes %}
+  <h2>“{{ c.playlist.name }}”</h2>
+  {% if c.replace_with is not none %}{% set ns.count = ns.count + 1 %}
+    <p>Will be replaced with the {{ c.replace_with|length }} tracks from the backup.</p>
+  {% endif %}
+  {% if c.remove %}{% set ns.count = ns.count + c.remove|length %}
+    <p><strong>Remove {{ c.remove|length }}</strong></p>
+    <div class="table-wrap"><table><tbody>
+      {% for i in c.remove %}<tr><td class="muted">#{{ i.position + 1 }}</td><td>{{ track_cell(i.track) }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  {% endif %}
+  {% if c.add %}{% set ns.count = ns.count + c.add|length %}
+    <p><strong>Add {{ c.add|length }}</strong> to the end</p>
+    <div class="table-wrap"><table><tbody>
+      {% for t in c.add %}<tr><td>{{ track_cell(t) }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  {% endif %}
+  {% if c.replace_with is none and not c.remove and not c.add %}<p class="muted">No changes.</p>{% endif %}
+{% endfor %}
+{% if plan.create %}{% set ns.count = ns.count + 1 %}
+  <h2>New playlist “{{ plan.create.name }}”</h2>
+  <p>{{ plan.create.tracks|length }} tracks, private.</p>
+  <div class="table-wrap"><table><tbody>
+    {% for t in plan.create.tracks %}<tr><td>{{ track_cell(t) }}</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endif %}
+<form method="post" action="/plans/{{ plan.id }}/apply" class="actions">
+  <button class="btn" {% if ns.count == 0 %}disabled{% endif %}>Apply in Spotify</button>
+  <a class="btn secondary" href="javascript:history.back()">Back</a>
+</form>
+{% endblock %}

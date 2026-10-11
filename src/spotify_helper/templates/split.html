@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import track_cell, tier_badge, playlist_checklist, playlist_select %}
+{% block content %}
+<h1>Split a big playlist</h1>
+<p class="sub">See which tracks in a big playlist are already in the playlists you pick, and clear those out.</p>
+<form method="get" class="card">
+  <p><label>Big playlist<br>{{ playlist_select(editable, "big", big) }}</label></p>
+  <p>Look for its tracks in:</p>
+  {{ playlist_checklist(editable, "targets", target_ids, exclude=big.id if big else None) }}
+  <div class="actions"><button class="btn">Analyze</button></div>
+</form>
+{% if result %}
+<form method="post" action="/split">
+  <input type="hidden" name="big" value="{{ big.id }}">
+  <input type="hidden" name="snapshot_id" value="{{ big.snapshot_id }}">
+  <h2>Already sorted: {{ result.placed|length }} of {{ result.rows|length }}</h2>
+  {% if result.placed %}
+  <div class="actions"><button class="btn secondary" data-check-all="positions">Select / clear all</button></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Remove</th><th>Track</th><th>Found in</th></tr></thead>
+    <tbody>
+    {% for r in result.placed %}
+    <tr>
+      <td><input type="checkbox" name="positions" value="{{ r.item.position }}" {% if not r.item.track.is_local %}checked{% else %}disabled{% endif %} aria-label="Remove from big playlist"></td>
+      <td>{{ track_cell(r.item.track) }}</td>
+      <td>{% for p, tier in r.matches %}<div>{{ p.name }} {{ tier_badge(tier) }}</div>{% endfor %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="actions"><button class="btn">Preview removing these from “{{ big.name }}”</button></div>
+  {% endif %}
+</form>
+<h2>Still to sort: {{ result.leftovers|length }}</h2>
+{% if result.leftovers %}
+<div class="table-wrap"><table><tbody>
+  {% for r in result.leftovers %}<tr><td>{{ track_cell(r.item.track) }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}<p class="muted">Everything here is already in one of the chosen playlists.</p>{% endif %}
+{% endif %}
+{% endblock %}

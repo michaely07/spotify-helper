@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Backups</h1>
+<p class="sub">A copy of each playlist is saved here automatically right before the tool changes it.</p>
+{% if backups %}
+<div class="table-wrap"><table>
+  <thead><tr><th>When (UTC)</th><th>Playlist</th><th>Tracks</th><th>Before</th><th></th></tr></thead>
+  <tbody>
+  {% for b in backups %}
+  <tr>
+    <td>{{ b.created_at[:16]|replace("T", " ") }}</td>
+    <td>{{ b.playlist_name }}</td>
+    <td>{{ b.track_count }}</td>
+    <td class="muted">{{ b.reason }}</td>
+    <td><a href="/backups/{{ b.id }}">View / restore</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}<div class="card">No backups yet. One is made automatically before every change.</div>{% endif %}
+{% endblock %}

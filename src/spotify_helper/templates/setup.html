@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>One-time setup</h1>
+<p class="sub">This tool needs its own Spotify app so it can read and edit your playlists.</p>
+<div class="card">
+<ol>
+  <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> and create an app (any name; tick “Web API”).</li>
+  <li>Add this exact Redirect URI: <code>{{ redirect_uri }}</code></li>
+  <li>Under <em>User Management</em>, add the email of your Spotify account.</li>
+  <li>Copy <code>.env.example</code> to <code>.env</code> and paste the app's <strong>Client ID</strong> into <code>SPOTIFY_CLIENT_ID</code>.</li>
+  <li>Restart the app and reload this page.</li>
+</ol>
+<p class="muted">Spotify requires the app owner to have Premium for development-mode apps.</p>
+</div>
+{% endblock %}

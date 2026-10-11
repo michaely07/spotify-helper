@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "_macros.html" import track_cell, tier_badge %}
+{% block content %}
+<h1>In “{{ a.name }}” and “{{ b.name }}”</h1>
+<p class="sub">{{ shared|length }} tracks from “{{ a.name }}” also appear in “{{ b.name }}”.</p>
+<div class="table-wrap"><table><tbody>
+  {% for it, tier in shared %}<tr><td>{{ track_cell(it.track) }}</td><td>{{ tier_badge(tier) }}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="actions"><a class="btn secondary" href="/move?src={{ a.id }}&dst={{ b.id }}">Move tracks between these</a></div>
+{% endblock %}

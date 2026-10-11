@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import playlist_checklist %}
+{% block content %}
+<h1>Playlist overlap</h1>
+<p class="sub">How many tracks from each row's playlist also appear in each column's playlist.</p>
+<form method="get" class="card">
+  {{ playlist_checklist(editable, "ids", chosen_ids) }}
+  <div class="actions"><button class="btn">Compare</button></div>
+</form>
+{% if matrix %}
+<div class="table-wrap"><table class="matrix">
+  <thead><tr><th></th>{% for p in chosen %}<th>{{ p.name }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in matrix %}{% set a = chosen[loop.index0] %}
+  <tr><th class="rowhead">{{ a.name }}</th>
+    {% for n in row %}{% set b = chosen[loop.index0] %}
+    <td>{% if a.id == b.id %}<span class="muted">{{ n }}</span>{% elif n %}<a href="/overlap/pair?a={{ a.id }}&b={{ b.id }}">{{ n }}</a>{% else %}<span class="muted">0</span>{% endif %}</td>
+    {% endfor %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% elif chosen %}<p class="muted">Pick at least two playlists.</p>{% endif %}
+{% endblock %}

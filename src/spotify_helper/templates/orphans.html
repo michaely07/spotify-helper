@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_macros.html" import track_cell %}
+{% block content %}
+<h1>Liked songs not in any playlist</h1>
+<p class="sub">{{ orphans|length }} of {{ liked_count }} liked songs aren't in any of your {{ playlist_count }} playlists (any version counts).
+Liked songs loaded {{ fetched_at[:16]|replace("T", " ") }} UTC · <a href="/orphans?refresh=1" data-busy>refresh</a></p>
+<p class="muted">Only playlists you own or collaborate on are checked; Spotify hides the contents of others.</p>
+{% if orphans %}
+<div class="table-wrap"><table>
+  <thead><tr><th>Track</th><th>Link</th></tr></thead>
+  <tbody>
+  {% for t in orphans %}<tr><td>{{ track_cell(t) }}</td><td><a href="https://open.spotify.com/track/{{ t.uri.split(':')[-1] }}" target="_blank" rel="noopener">Open</a></td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% else %}<div class="card">Every liked song lives in at least one playlist.</div>{% endif %}
+{% endblock %}
