@@ -11,6 +11,7 @@ class FakeSpotifyClient:
         self.liked: list[Track] = []
         self.calls: list[tuple] = []
         self._version = 0
+        self._frozen_list: list[Playlist] | None = None
 
     # --- setup helpers -------------------------------------------------
     def put(self, pl: Playlist, tracks: list[Track]) -> Playlist:
@@ -25,6 +26,10 @@ class FakeSpotifyClient:
                                      "total": len(self.tracks[pid])})
         return self.meta[pid]
 
+    def lag_playlist_list(self) -> None:
+        """Mimic Spotify: GET /me/playlists keeps returning this moment's metadata for a while after writes."""
+        self._frozen_list = list(self.meta.values())
+
     def uris(self, pid: str) -> list[str]:
         return [t.uri for t in self.tracks[pid]]
 
@@ -33,7 +38,7 @@ class FakeSpotifyClient:
         return self.user_id
 
     def get_my_playlists(self) -> list[Playlist]:
-        return list(self.meta.values())
+        return list(self._frozen_list if self._frozen_list is not None else self.meta.values())
 
     def get_playlist(self, pid: str) -> Playlist:
         self.calls.append(("get_playlist", pid))

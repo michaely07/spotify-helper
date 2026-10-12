@@ -72,6 +72,13 @@ def create_app(client=None, data_dir: str | Path | None = None) -> FastAPI:
     app.mount("/static", StaticFiles(directory=PKG / "static"), name="static")
     templates = Jinja2Templates(directory=PKG / "templates")
 
+    @app.middleware("http")
+    async def no_store(request: Request, call_next):
+        response = await call_next(request)
+        if not request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-store"  # pages reflect live Spotify data; never reuse them
+        return response
+
     def render(request: Request, name: str, status_code: int = 200, **ctx) -> HTMLResponse:
         return templates.TemplateResponse(request, name, ctx, status_code=status_code)
 
@@ -162,7 +169,12 @@ def create_app(client=None, data_dir: str | Path | None = None) -> FastAPI:
         if plan is None:
             raise UserFacingError("That preview has expired or was already applied.")
         result = apply_plan(plan, lib().client, backups)
-        return render(request, "result.html", plan=plan, result=result)
+        for before, after in result.updated:
+            lib().remember_write(before, after)
+        if result.created:
+            lib().remember_write(None, result.created)
+        return render(request, "result.html", plan=plan, result=result, created=result.created is not None,
+                      totals={after.id: after.total for _, after in result.updated})
 
     # --- dedupe ----------------------------------------------------------
     @app.get("/dedupe/{pid}")

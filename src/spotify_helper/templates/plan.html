@@ -33,6 +33,6 @@
 {% endif %}
 <form method="post" action="/plans/{{ plan.id }}/apply" class="actions">
   <button class="btn" {% if ns.count == 0 %}disabled{% endif %}>Apply in Spotify</button>
-  <a class="btn secondary" href="javascript:history.back()">Back</a>
+  <a class="btn secondary" href="/" data-back>Back</a>
 </form>
 {% endblock %}

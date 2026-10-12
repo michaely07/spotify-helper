@@ -133,3 +133,26 @@ def test_applying_twice_is_refused(env):
     plan_id = _plan_id(http.post("/dedupe/p", data={"snapshot_id": pl.snapshot_id, "include": "0"}))
     assert http.post(f"/plans/{plan_id}/apply").status_code == 200
     assert http.post(f"/plans/{plan_id}/apply").status_code == 400
+
+
+def test_counts_are_current_even_while_spotify_playlist_list_lags(env):
+    fake, http = env
+    t, other = track("Song"), track("Other")
+    pl = fake.put(playlist("p", "Mix"), [t, other, t])
+    fake.put(playlist("q", "Other list"), [other])
+    fake.lag_playlist_list()
+
+    plan_id = _plan_id(http.post("/dedupe/p", data={"snapshot_id": pl.snapshot_id, "include": "0"}))
+    http.post(f"/plans/{plan_id}/apply")
+    assert fake.uris("p") == [t.uri, other.uri]
+
+    home = http.get("/").text
+    assert 'data-count-for="p">2<' in home, "home page shows the pre-change count"
+    # Pages that read track lists must not reuse the pre-change cached contents either.
+    overlap = http.get("/overlap", params=[("ids", "p"), ("ids", "q")]).text
+    assert re.search(r'<td><span class="muted">2</span></td>', overlap)
+
+
+def test_pages_are_not_cached_by_the_browser(env):
+    _, http = env
+    assert "no-store" in http.get("/").headers.get("cache-control", "")

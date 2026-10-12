@@ -2,7 +2,7 @@
 {% from "_macros.html" import track_cell, tier_badge, duration %}
 {% block content %}
 <h1>Duplicates in “{{ playlist.name }}”</h1>
-<p class="sub">{{ groups|length }} group{{ "" if groups|length == 1 else "s" }} found in {{ playlist.total }} tracks. Pick which copy to keep in each group; the album version is pre-selected.</p>
+<p class="sub">{{ groups|length }} group{{ "" if groups|length == 1 else "s" }} found in {{ playlist.total }} tracks.{% if groups %} Pick which copy to keep in each group; the album version is pre-selected.{% endif %}</p>
 {% if groups %}
 <form method="post">
   <input type="hidden" name="snapshot_id" value="{{ playlist.snapshot_id }}">
@@ -29,7 +29,7 @@
   </div>
   {% endfor %}
   <p class="muted">Local files can't be removed through Spotify's API and are always kept.</p>
-  <div class="actions"><button class="btn">Preview changes</button><a class="btn secondary" href="/">Cancel</a></div>
+  <div class="actions"><button class="btn">Preview changes</button><a class="btn secondary" href="/" data-close>Cancel</a></div>
 </form>
 {% else %}
 <div class="card">No duplicates. Nice and tidy.</div>

@@ -11,6 +11,10 @@ class Library:
         self.client = client
         self.cache = cache
         self._user_id: str | None = None
+        # Spotify's playlist list (GET /me/playlists) lags behind writes for a while, while GET /playlists/{id}
+        # is current. After our own writes we keep the fresh metadata here, along with the snapshot ids the
+        # list may still report, and use it until the list catches up.
+        self._recent: dict[str, tuple[set[str], Playlist]] = {}
 
     @property
     def user_id(self) -> str:
@@ -21,8 +25,25 @@ class Library:
     def forget_user(self) -> None:
         self._user_id = None
 
+    def remember_write(self, before: Playlist | None, after: Playlist) -> None:
+        stale = self._recent.get(after.id, (set(), after))[0]
+        if before is not None and before.snapshot_id != after.snapshot_id:
+            stale = stale | {before.snapshot_id}
+        self._recent[after.id] = (stale, after)
+
     def playlists(self) -> list[Playlist]:
-        return self.client.get_my_playlists()
+        listed = self.client.get_my_playlists()
+        result = []
+        for p in listed:
+            recent = self._recent.get(p.id)
+            if recent and p.snapshot_id in recent[0]:
+                p = recent[1]  # list is still behind our write
+            elif recent:
+                del self._recent[p.id]  # list caught up (or the playlist changed elsewhere since)
+            result.append(p)
+        listed_ids = {p.id for p in listed}
+        just_created = [after for pid, (_, after) in self._recent.items() if pid not in listed_ids]
+        return just_created + result
 
     def editable_playlists(self) -> list[Playlist]:
         """Playlists whose contents Spotify will show us (owned or collaborative)."""

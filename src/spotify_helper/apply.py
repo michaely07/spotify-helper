@@ -25,6 +25,7 @@ class StalePlanError(Exception):
 @dataclass
 class ApplyResult:
     backup_ids: list[int] = field(default_factory=list)
+    updated: list[tuple[Playlist, Playlist]] = field(default_factory=list)  # (as previewed, as now)
     created: Playlist | None = None
     messages: list[str] = field(default_factory=list)
 
@@ -88,13 +89,14 @@ def apply_plan(plan: ChangePlan, client: PlaylistWriter, backups: BackupStore) -
         if change.add:
             client.add_uris(pid, [t.uri for t in change.add if t.available and not t.is_local])
         result.messages.append(_summary(change))
+        result.updated.append((change.playlist, client.get_playlist(pid)))
 
     if plan.create:
         created = client.create_playlist(plan.create.name, plan.create.description)
         uris = [t.uri for t in plan.create.tracks if t.available and not t.is_local]
         if uris:
             client.add_uris(created.id, uris)
-        result.created = created
+        result.created = client.get_playlist(created.id)
         result.messages.append(f"Created “{created.name}” with {len(uris)} tracks.")
     return result
 
