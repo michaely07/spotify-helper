@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "_macros.html" import playlist_select %}
+{% block content %}
+<h1>Split by genre</h1>
+<p class="sub">Make smaller playlists from a big one, one per subgenre you pick. The big playlist itself is never changed.</p>
+<form method="post" action="/genres/scan" class="card">
+  <p><label>Big playlist<br>{{ playlist_select(editable, "big", big) }}</label></p>
+  <div class="actions"><button class="btn">Scan genres</button></div>
+  <p class="muted">Genres come from Last.fm listener tags. The first scan of a big playlist takes a few minutes (about 4 tracks per second); after that it's quick.</p>
+</form>
+{% endblock %}

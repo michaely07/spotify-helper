@@ -6,6 +6,7 @@
   <title>{% block title %}Playlist Helper{% endblock %}</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8' fill='%23128a4a'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/static/style.css">
+  {% block head %}{% endblock %}
 </head>
 <body>
 <header class="top">
@@ -13,6 +14,7 @@
   <nav>
     <a href="/">Playlists</a>
     <a href="/split" data-modal>Split</a>
+    <a href="/genres" data-modal>Genres</a>
     <a href="/orphans" data-modal>Orphans</a>
     <a href="/overlap" data-modal>Overlap</a>
     <a href="/merge" data-modal>Merge</a>

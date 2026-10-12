@@ -91,8 +91,8 @@ def test_shared_tracks_lists_matches_with_tier():
 def test_merge_dedupes_across_sources_in_order():
     a, b, c = track("A"), track("B"), track("C")
     plan = build_merge_plan("Mix", [(playlist("p1"), items(a, b)), (playlist("p2"), items(b, track("A - 2011 Remaster"), c))])
-    assert [t.name for t in plan.create.tracks] == ["A", "B", "C"]
-    assert plan.create.name == "Mix"
+    assert [t.name for t in plan.creates[0].tracks] == ["A", "B", "C"]
+    assert plan.creates[0].name == "Mix"
 
 
 def test_move_skips_songs_already_in_destination_but_still_removes_from_source():

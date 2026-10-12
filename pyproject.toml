@@ -24,7 +24,7 @@ dev = ["pytest>=8"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-spotify_helper = ["templates/*.html", "static/*"]
+spotify_helper = ["templates/*.html", "static/*", "data/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

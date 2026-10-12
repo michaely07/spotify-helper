@@ -47,12 +47,16 @@ def _is_strip_tag(segment: str) -> bool:
     return bool(_STRIP_TAG.match(segment.strip()))
 
 
-def normalize_title(title: str) -> str:
-    t = title.lower()
-    t = _BRACKETED.sub(lambda m: "" if _is_strip_tag(m.group(1)) else m.group(0), t)
+def strip_reissue_tags(title: str) -> str:
+    """Drop remaster/feat/album-version tags, keeping the title's case (good for looking it up elsewhere)."""
+    t = _BRACKETED.sub(lambda m: "" if _is_strip_tag(m.group(1).lower()) else m.group(0), title)
     head, *suffixes = _DASH_SPLIT.split(t)
-    t = head + "".join(f" - {s}" for s in suffixes if not _is_strip_tag(s))
-    return " ".join(_NON_WORD.sub(" ", t).split())
+    t = head + "".join(f" - {s}" for s in suffixes if not _is_strip_tag(s.lower()))
+    return " ".join(t.split())
+
+
+def normalize_title(title: str) -> str:
+    return " ".join(_NON_WORD.sub(" ", strip_reissue_tags(title).lower()).split())
 
 
 def _likely_key(t: Track) -> tuple[str, str]:

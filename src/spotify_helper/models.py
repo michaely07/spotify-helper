@@ -88,5 +88,5 @@ class ChangePlan:
     id: str
     title: str
     changes: list[PlaylistChange] = field(default_factory=list)
-    create: NewPlaylist | None = None
+    creates: list[NewPlaylist] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)

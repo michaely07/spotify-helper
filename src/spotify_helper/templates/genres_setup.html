@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Split by genre: one-time setup</h1>
+<p class="sub">Spotify doesn't give apps genre data, so this tool uses Last.fm's listener tags.</p>
+<div class="card">
+<ol>
+  <li>Create a free API account at <a href="https://www.last.fm/api/account/create" target="_blank" rel="noopener">last.fm/api/account/create</a> (any app name; the callback URL can be left blank).</li>
+  <li>Copy the <strong>API key</strong> into <code>.env</code> as <code>LASTFM_API_KEY=…</code></li>
+  <li>Restart the app.</li>
+</ol>
+</div>
+{% endblock %}

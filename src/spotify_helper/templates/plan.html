@@ -24,13 +24,13 @@
   {% endif %}
   {% if c.replace_with is none and not c.remove and not c.add %}<p class="muted">No changes.</p>{% endif %}
 {% endfor %}
-{% if plan.create %}{% set ns.count = ns.count + 1 %}
-  <h2>New playlist “{{ plan.create.name }}”</h2>
-  <p>{{ plan.create.tracks|length }} tracks, private.</p>
+{% for new in plan.creates %}{% set ns.count = ns.count + 1 %}
+  <h2>New playlist “{{ new.name }}”</h2>
+  <p>{{ new.tracks|length }} tracks, private.</p>
   <div class="table-wrap"><table><tbody>
-    {% for t in plan.create.tracks %}<tr><td>{{ track_cell(t) }}</td></tr>{% endfor %}
+    {% for t in new.tracks %}<tr><td>{{ track_cell(t) }}</td></tr>{% endfor %}
   </tbody></table></div>
-{% endif %}
+{% endfor %}
 <form method="post" action="/plans/{{ plan.id }}/apply" class="actions">
   <button class="btn" {% if ns.count == 0 %}disabled{% endif %}>Apply in Spotify</button>
   <a class="btn secondary" href="/" data-back>Back</a>

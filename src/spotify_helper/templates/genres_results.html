@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_macros.html" import track_cell %}
+{% macro genre_rows(rows) %}
+  {% for i, g in rows %}
+  <tr>
+    <td><input type="checkbox" name="include" value="{{ i }}" aria-label="Make a playlist for {{ g.title }}"></td>
+    <td><details><summary>{{ g.title }} <span class="muted count-inline">({{ g.items|length }})</span></summary>
+      <ul class="mini">{% for it in g.items %}<li>{{ it.track.name }} <span class="muted">· {{ it.track.artist_line }}</span></li>{% endfor %}</ul>
+    </details></td>
+    <td>{{ g.items|length }}</td>
+    <td><input type="text" name="name_{{ i }}" value="{{ names[g.genre] }}" maxlength="100" aria-label="Playlist name for {{ g.title }}"></td>
+  </tr>
+  {% endfor %}
+{% endmacro %}
+{% block content %}
+<h1>Genres in “{{ scan.playlist.name }}”</h1>
+<p class="sub">Tick the subgenres you want as playlists. Give rows the same name to combine them. A track can land in several playlists. “{{ scan.playlist.name }}” itself is not changed.</p>
+{% if scan.groups %}
+<form method="post" action="/genres/preview">
+  <input type="hidden" name="job_id" value="{{ job.id }}">
+  {% if main_rows %}
+  <div class="table-wrap"><table class="genres">
+    <thead><tr><th>Make</th><th>Subgenre</th><th>Tracks</th><th>Playlist name</th></tr></thead>
+    <tbody>{{ genre_rows(main_rows) }}</tbody>
+  </table></div>
+  {% endif %}
+  {% if small_rows %}
+  <details class="more" {% if not main_rows %}open{% endif %}><summary>Smaller subgenres ({{ small_rows|length }}, under 3 tracks each)</summary>
+    <div class="table-wrap"><table class="genres">
+      <thead><tr><th>Make</th><th>Subgenre</th><th>Tracks</th><th>Playlist name</th></tr></thead>
+      <tbody>{{ genre_rows(small_rows) }}</tbody>
+    </table></div>
+  </details>
+  {% endif %}
+  <div class="actions"><button class="btn">Preview playlists</button></div>
+</form>
+{% else %}
+<div class="card">Last.fm had no genre tags for these tracks.</div>
+{% endif %}
+<h2>No usable genre tags: {{ scan.untagged|length }}</h2>
+{% if scan.untagged %}
+<details><summary>Show tracks</summary>
+<div class="table-wrap"><table><tbody>
+  {% for it in scan.untagged %}<tr><td>{{ track_cell(it.track) }}</td></tr>{% endfor %}
+</tbody></table></div>
+</details>
+{% endif %}
+{% endblock %}

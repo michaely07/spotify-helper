@@ -11,6 +11,7 @@ let history_ = [];      // URLs shown in the popup, for its Back button
 let applied = false;    // a change was applied in Spotify while the popup was open
 let created = false;    // ...and it created a playlist the page behind doesn't list yet
 let loading = false;
+let pollTimer;           // refreshes a progress page shown in the popup
 
 function setLoading(on) {
   loading = on;
@@ -18,9 +19,9 @@ function setLoading(on) {
   modalStatus.textContent = on ? "Working… big playlists can take a minute the first time." : "";
 }
 
-async function loadInModal(url, init = {}, { remember = true } = {}) {
+async function loadInModal(url, init = {}, { remember = true, quiet = false } = {}) {
   if (loading) return;
-  setLoading(true);
+  if (quiet) loading = true; else setLoading(true);
   let resp, html;
   try {
     resp = await fetch(url, init);
@@ -38,7 +39,7 @@ async function loadInModal(url, init = {}, { remember = true } = {}) {
   }
   const doc = new DOMParser().parseFromString(html, "text/html");
   modalBody.innerHTML = (doc.querySelector("main") || doc.body).innerHTML;
-  modal.scrollTop = 0;
+  if (!quiet) modal.scrollTop = 0;
   // history_'s last entry is the page on screen; null marks one that can't be re-fetched. A successful POST
   // answered directly (e.g. "Apply") is a point of no return, so Back is cleared there. A failed one (an
   // error page) can step back to the form. A POST that redirected landed on a re-fetchable page.
@@ -49,8 +50,22 @@ async function loadInModal(url, init = {}, { remember = true } = {}) {
   setLoading(false);
   syncDisabledChoices(modalBody);
   applyUpdates();
+  schedulePoll();
   const heading = modalBody.querySelector("h1");
-  if (heading) heading.setAttribute("tabindex", "-1"), heading.focus({ preventScroll: true });
+  if (heading && !quiet) heading.setAttribute("tabindex", "-1"), heading.focus({ preventScroll: true });
+}
+
+// A page with [data-poll] (e.g. a scan in progress) is re-fetched every second until it's replaced.
+function schedulePoll() {
+  clearTimeout(pollTimer);
+  const poll = modalBody.querySelector("[data-poll]");
+  if (!poll) return;
+  const shown = history_[history_.length - 1];
+  pollTimer = setTimeout(() => {
+    if (modal.open && history_[history_.length - 1] === shown) {
+      loadInModal(poll.dataset.poll, {}, { remember: false, quiet: true });
+    }
+  }, 1000);
 }
 
 // A <select data-disables="x"> greys out and unticks the checkbox named x for the playlist it has selected
@@ -95,6 +110,7 @@ function modalGoBack() {
 }
 
 modal.addEventListener("close", () => {
+  clearTimeout(pollTimer);
   modalBody.innerHTML = "";
   // The home page's counts were updated in place; anything else (or a new playlist) needs a fresh render.
   if (applied && (created || location.pathname !== "/")) location.reload();

@@ -113,12 +113,11 @@ def test_restore_round_trip(backups):
     assert len(backups.list()) == 2
 
 
-def test_apply_creates_new_playlist(backups):
+def test_apply_creates_several_playlists(backups):
     fake = FakeSpotifyClient()
-    tracks = [track("A"), track("B")]
-    plan = ChangePlan(id="x", title="merge", create=NewPlaylist(name="Merged", description="", tracks=tracks))
-
+    a, b = [track("A")], [track("B"), track("C")]
+    plan = ChangePlan(id="x", title="split", creates=[NewPlaylist(name="One", description="", tracks=a),
+                                                      NewPlaylist(name="Two", description="", tracks=b)])
     result = apply_plan(plan, fake, backups)
-
-    assert result.created is not None
-    assert fake.uris(result.created.id) == [t.uri for t in tracks]
+    assert [p.name for p in result.created] == ["One", "Two"]
+    assert [fake.uris(p.id) for p in result.created] == [[t.uri for t in a], [t.uri for t in b]]

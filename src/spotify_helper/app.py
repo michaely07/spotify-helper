@@ -20,10 +20,14 @@ from .backup import BackupStore
 from .cache import Cache
 from .features import new_plan_id
 from .features.dedupe import build_dedupe_plan, find_duplicates
+from .features.genre_split import build_genre_plan, default_name, summarize
 from .features.merge_move import build_merge_plan, build_move_plan
 from .features.orphans import find_orphans
 from .features.overlap import overlap_matrix, shared_tracks
 from .features.split import analyze_split, build_split_plan
+from .genres import GenreTagger
+from .jobs import Jobs
+from .lastfm import LastFmClient
 from .library import Library
 from .matching import SongIndex
 from .models import ChangePlan, Playlist, PlaylistChange
@@ -31,6 +35,7 @@ from .spotify_client import SpotifyClient, SpotifyError
 
 PKG = Path(__file__).parent
 DEFAULT_REDIRECT = "http://127.0.0.1:8000/callback"
+MIN_GROUP = 3  # genre-split rows with fewer tracks are tucked under "Smaller subgenres"
 
 
 class NotConfigured(Exception):
@@ -52,8 +57,8 @@ def _ints(values) -> set[int]:
     return {int(v) for v in values}
 
 
-def create_app(client=None, data_dir: str | Path | None = None) -> FastAPI:
-    """Pass `client` to run against a fake Spotify (tests); otherwise configured from .env."""
+def create_app(client=None, data_dir: str | Path | None = None, tag_source=None) -> FastAPI:
+    """Pass `client` / `tag_source` to run against a fake Spotify / Last.fm (tests); otherwise configured from .env."""
     load_dotenv()
     data_dir = Path(data_dir or os.environ.get("SPOTIFY_HELPER_DATA", "data"))
     auth: Auth | None = None
@@ -64,7 +69,12 @@ def create_app(client=None, data_dir: str | Path | None = None) -> FastAPI:
             auth = Auth(client_id, redirect, str(data_dir / "token_cache.json"))
             client = SpotifyClient(auth.access_token)
 
-    library = Library(client, Cache(data_dir / "spotify_helper.db")) if client else None
+    cache = Cache(data_dir / "spotify_helper.db")
+    library = Library(client, cache) if client else None
+    if tag_source is None and os.environ.get("LASTFM_API_KEY", "").strip():
+        tag_source = LastFmClient(os.environ["LASTFM_API_KEY"].strip())
+    tagger = GenreTagger(tag_source, cache) if tag_source else None
+    jobs = Jobs()
     backups = BackupStore(data_dir / "spotify_helper.db")
     plans: dict[str, ChangePlan] = {}
 
@@ -171,9 +181,9 @@ def create_app(client=None, data_dir: str | Path | None = None) -> FastAPI:
         result = apply_plan(plan, lib().client, backups)
         for before, after in result.updated:
             lib().remember_write(before, after)
-        if result.created:
-            lib().remember_write(None, result.created)
-        return render(request, "result.html", plan=plan, result=result, created=result.created is not None,
+        for created in result.created:
+            lib().remember_write(None, created)
+        return render(request, "result.html", plan=plan, result=result, created=bool(result.created),
                       totals={after.id: after.total for _, after in result.updated})
 
     # --- dedupe ----------------------------------------------------------
@@ -268,6 +278,70 @@ def create_app(client=None, data_dir: str | Path | None = None) -> FastAPI:
         if not positions:
             raise UserFacingError("Tick at least one track to move.")
         return store_plan(build_move_plan(src, lib().items(src), positions, dst, lib().items(dst)))
+
+    # --- genre split -----------------------------------------------------
+    @app.get("/genres")
+    def genres_page(request: Request, big: str | None = None):
+        if tagger is None:
+            return render(request, "genres_setup.html")
+        editable = lib().editable_playlists()
+        return render(request, "genres.html", editable=editable, big=next((p for p in editable if p.id == big), None))
+
+    @app.post("/genres/scan")
+    def genres_scan(form: Form):
+        if tagger is None:
+            raise UserFacingError("Add LASTFM_API_KEY to .env first.")
+        pl = next((p for p in lib().editable_playlists() if p.id == form.get("big")), None)
+        if pl is None:
+            raise UserFacingError("Pick one of your own playlists to split.")
+
+        def scan(progress):
+            progress(0, 0)
+            items = [i for i in lib().items(pl) if i.track.available]
+            memo: dict[str, list[str]] = {}
+            for n, it in enumerate(items, 1):
+                if it.track.uri not in memo:
+                    memo[it.track.uri] = tagger.genres_for(it.track)
+                progress(n, len(items))
+            return summarize(pl, items, lambda t: memo[t.uri])
+
+        return RedirectResponse(f"/genres/scan/{jobs.start(pl.name, scan)}", status_code=303)
+
+    @app.get("/genres/scan/{job_id}")
+    def genres_status(request: Request, job_id: str):
+        job = jobs.get(job_id)
+        if job is None:
+            raise UserFacingError("That scan has expired (the app may have restarted). Please scan again.")
+        if not job.finished:
+            return render(request, "genres_progress.html", job=job)
+        if job.error:
+            raise UserFacingError(job.error)
+        scan = job.result
+        rows = list(enumerate(scan.groups))
+        return render(request, "genres_results.html", job=job, scan=scan,
+                      main_rows=[r for r in rows if len(r[1].items) >= MIN_GROUP],
+                      small_rows=[r for r in rows if len(r[1].items) < MIN_GROUP],
+                      names={g.genre: default_name(scan.playlist.name, g.genre) for g in scan.groups})
+
+    @app.post("/genres/preview")
+    def genres_preview(form: Form):
+        job = jobs.get(form.get("job_id", ""))
+        if job is None or not job.finished or job.error:
+            raise UserFacingError("That scan has expired. Please scan again.")
+        scan = job.result
+        selections = {}
+        for i in _ints(form.getlist("include")):
+            if 0 <= i < len(scan.groups):
+                selections[scan.groups[i].genre] = form.get(f"name_{i}", "")
+        if not selections:
+            raise UserFacingError("Tick at least one subgenre.")
+        names = {n.strip() for n in selections.values()}
+        existing = [(p, lib().items(p)) for p in lib().editable_playlists() if p.name in names]
+        try:
+            plan = build_genre_plan(scan, selections, existing)
+        except ValueError as e:
+            raise UserFacingError(str(e)) from e
+        return store_plan(plan)
 
     # --- backups ---------------------------------------------------------
     @app.get("/backups")

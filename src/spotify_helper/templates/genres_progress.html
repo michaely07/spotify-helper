@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block head %}<meta http-equiv="refresh" content="1">{% endblock %}
+{% block content %}
+<h1>Scanning “{{ job.label }}”…</h1>
+<div data-poll="/genres/scan/{{ job.id }}"></div>
+<progress class="scan" max="{{ job.total or 1 }}" value="{{ job.done }}"></progress>
+<p class="muted">{% if job.total %}{{ job.done }} of {{ job.total }} tracks{% else %}Loading the playlist…{% endif %}</p>
+<p class="muted">Already-scanned tracks are remembered, so the next scan of this playlist will be quick.</p>
+{% endblock %}

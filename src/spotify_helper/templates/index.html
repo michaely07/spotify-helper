@@ -11,7 +11,10 @@
     <div>
       <div><strong>{{ p.name }}</strong></div>
       <div class="muted"><span data-count-for="{{ p.id }}">{{ p.total }}</span> tracks{% if p.collaborative %} · collaborative{% endif %}</div>
-      <a href="/dedupe/{{ p.id }}" data-modal>Find duplicates</a>
+      <div class="links">
+        <a href="/dedupe/{{ p.id }}" data-modal>Find duplicates</a>
+        <a href="/genres?big={{ p.id }}" data-modal>Split by genre</a>
+      </div>
     </div>
   </div>
   {% else %}

@@ -21,7 +21,7 @@ def build_merge_plan(name: str, sources: list[tuple[Playlist, list[PlaylistItem]
     return ChangePlan(
         id=new_plan_id(),
         title=f"Merge {len(sources)} playlists into “{name}”",
-        create=NewPlaylist(name=name, description=f"Merged from: {source_names}", tracks=tracks),
+        creates=[NewPlaylist(name=name, description=f"Merged from: {source_names}", tracks=tracks)],
         notes=[f"{skipped} duplicate track(s) skipped."] if skipped else [],
     )
 

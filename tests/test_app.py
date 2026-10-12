@@ -1,4 +1,5 @@
 import re
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -6,6 +7,13 @@ from fastapi.testclient import TestClient
 from fake_spotify import FakeSpotifyClient
 from helpers import playlist, track
 from spotify_helper.app import create_app
+
+
+@pytest.fixture(autouse=True)
+def no_real_config(monkeypatch):
+    """Keep the developer's .env (e.g. a real LASTFM_API_KEY) out of tests."""
+    monkeypatch.delenv("LASTFM_API_KEY", raising=False)
+    monkeypatch.setattr("spotify_helper.app.load_dotenv", lambda: None)
 
 
 @pytest.fixture
@@ -166,3 +174,81 @@ def test_split_disables_the_big_playlist_in_the_target_list(env):
     assert re.search(r'<input[^>]*name="targets" value="big"[^>]*disabled', page)
     assert not re.search(r'<input[^>]*name="targets" value="t1"[^>]*disabled', page)
     assert 'data-disables="targets"' in page
+
+
+def _wait_for_results(http, url):
+    for _ in range(200):
+        page = http.get(url).text
+        if "data-poll" not in page:
+            return page
+        time.sleep(0.02)
+    raise AssertionError("scan never finished")
+
+
+def test_genre_split_flow(tmp_path):
+    class Tags:
+        def track_tags(self, artist, title):
+            return {"A": [("shoegaze", 100)], "B": [("shoegaze", 90), ("dream pop", 60)],
+                    "C": [("drill", 100)]}.get(title, [])
+
+        def artist_tags(self, artist):
+            return []
+
+    fake = FakeSpotifyClient()
+    a, b, c, d = track("A"), track("B"), track("C"), track("D")
+    fake.put(playlist("big", "Everything"), [a, b, c, d])
+    fake.put(playlist("old", "Everything – Drill"), [])
+    http = TestClient(create_app(client=fake, data_dir=tmp_path, tag_source=Tags()))
+
+    resp = http.post("/genres/scan", data={"big": "big"})
+    page = _wait_for_results(http, resp.url.path)
+    assert "Shoegaze" in page and "Dream Pop" in page and "No usable genre tags: 1" in page
+    job_id = re.search(r'name="job_id" value="([0-9a-f]+)"', page).group(1)
+    # rows: 0 shoegaze (2 tracks), 1 dream pop (1), 2 drill (1)
+    resp = http.post("/genres/preview", data={"job_id": job_id, "include": ["0", "2"],
+                                               "name_0": "Everything – Shoegaze", "name_2": "Everything – Drill"})
+    http.post(f"/plans/{_plan_id(resp)}/apply")
+
+    assert fake.uris("big") == [a.uri, b.uri, c.uri, d.uri]  # untouched
+    shoegaze = next(p for p in fake.meta.values() if p.name == "Everything – Shoegaze")
+    assert fake.uris(shoegaze.id) == [a.uri, b.uri]
+    assert fake.uris("old") == [c.uri]  # topped up, not duplicated
+
+
+def test_genre_split_refuses_big_playlist_name(tmp_path):
+    class Tags:
+        def track_tags(self, artist, title):
+            return [("drill", 100)]
+
+        def artist_tags(self, artist):
+            return []
+
+    fake = FakeSpotifyClient()
+    fake.put(playlist("big", "Everything"), [track("A")])
+    http = TestClient(create_app(client=fake, data_dir=tmp_path, tag_source=Tags()))
+    page = _wait_for_results(http, http.post("/genres/scan", data={"big": "big"}).url.path)
+    job_id = re.search(r'name="job_id" value="([0-9a-f]+)"', page).group(1)
+    resp = http.post("/genres/preview", data={"job_id": job_id, "include": ["0"], "name_0": "Everything"})
+    assert resp.status_code == 400 and "playlist being split" in resp.text
+
+
+def test_genre_scan_error_is_shown(tmp_path):
+    from spotify_helper.lastfm import LastFmError
+
+    class Broken:
+        def track_tags(self, artist, title):
+            raise LastFmError("Last.fm rejected the API key (Invalid API key).")
+
+        artist_tags = track_tags
+
+    fake = FakeSpotifyClient()
+    fake.put(playlist("big", "Everything"), [track("A")])
+    http = TestClient(create_app(client=fake, data_dir=tmp_path, tag_source=Broken()))
+    url = http.post("/genres/scan", data={"big": "big"}).url.path
+    page = _wait_for_results(http, url)
+    assert "rejected the API key" in page
+
+
+def test_genres_page_explains_setup_without_lastfm_key(env):
+    _, http = env
+    assert "LASTFM_API_KEY" in http.get("/genres").text
