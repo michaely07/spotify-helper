@@ -47,9 +47,23 @@ async function loadInModal(url, init = {}, { remember = true } = {}) {
   } else if (remember) history_.push(resp.url);
   modalBack.hidden = history_.length < 2;
   setLoading(false);
+  syncDisabledChoices(modalBody);
   applyUpdates();
   const heading = modalBody.querySelector("h1");
   if (heading) heading.setAttribute("tabindex", "-1"), heading.focus({ preventScroll: true });
+}
+
+// A <select data-disables="x"> greys out and unticks the checkbox named x for the playlist it has selected
+// (e.g. Split: the big playlist can't also be a playlist to look in).
+function syncDisabledChoices(root) {
+  root.querySelectorAll("select[data-disables]").forEach((select) => {
+    select.form.querySelectorAll(`input[type=checkbox][name="${select.dataset.disables}"]`).forEach((box) => {
+      const off = select.value !== "" && box.value === select.value;
+      box.disabled = off;
+      if (off) box.checked = false;
+      box.closest("label")?.classList.toggle("is-disabled", off);
+    });
+  });
 }
 
 // After "Apply", the result page carries new track counts; update the page behind the popup right away.
@@ -133,4 +147,9 @@ document.addEventListener("submit", (e) => {
   }
 });
 
+document.addEventListener("change", (e) => {
+  if (e.target.matches("select[data-disables]")) syncDisabledChoices(e.target.form);
+});
+
+syncDisabledChoices(document);
 window.addEventListener("pageshow", () => { busy.hidden = true; });

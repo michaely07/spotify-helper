@@ -52,6 +52,7 @@ tbody tr:hover { background: var(--row-hover); }
 .muted { color: var(--muted); }
 .checklist { max-height: 340px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; padding: .4rem .6rem; background: var(--surface); }
 .checklist label { display: block; padding: .15rem 0; }
+.checklist label.is-disabled { opacity: .45; cursor: not-allowed; }
 select, input[type=text] { font: inherit; padding: .4rem .5rem; border: 1px solid var(--border); border-radius: 6px;
   background: var(--surface); color: var(--text); max-width: 100%; }
 .group { margin-bottom: 1rem; }

@@ -14,17 +14,18 @@
 
 {% macro duration(ms) -%}{{ (ms // 60000) }}:{{ "%02d"|format((ms // 1000) % 60) }}{%- endmacro %}
 
-{% macro playlist_checklist(playlists, name, checked_ids=(), exclude=None) -%}
+{% macro playlist_checklist(playlists, name, checked_ids=(), disabled_id=None) -%}
 <div class="checklist">
-  {% for p in playlists if p.id != exclude %}
-  <label><input type="checkbox" name="{{ name }}" value="{{ p.id }}" {% if p.id in checked_ids %}checked{% endif %}>
+  {% for p in playlists %}{% set off = p.id == disabled_id %}
+  <label{% if off %} class="is-disabled"{% endif %}><input type="checkbox" name="{{ name }}" value="{{ p.id }}" {% if p.id in checked_ids and not off %}checked{% endif %}{% if off %} disabled{% endif %}>
     {{ p.name }} <span class="muted">({{ p.total }})</span></label>
   {% endfor %}
 </div>
 {%- endmacro %}
 
-{% macro playlist_select(playlists, name, selected=None, placeholder="Choose a playlist") -%}
-<select name="{{ name }}" required>
+{# disables: name of checkboxes in the same form to disable for the selected playlist (see app.js) #}
+{% macro playlist_select(playlists, name, selected=None, placeholder="Choose a playlist", disables=None) -%}
+<select name="{{ name }}" required{% if disables %} data-disables="{{ disables }}"{% endif %}>
   <option value="">{{ placeholder }}</option>
   {% for p in playlists %}<option value="{{ p.id }}" {% if selected and p.id == selected.id %}selected{% endif %}>{{ p.name }} ({{ p.total }})</option>{% endfor %}
 </select>

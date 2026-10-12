@@ -197,10 +197,11 @@ def create_app(client=None, data_dir: str | Path | None = None) -> FastAPI:
         editable = lib().editable_playlists()
         result = big_pl = None
         chosen = by_id([t for t in targets if t != big])
-        if big and chosen:
+        if big:
             big_pl = next((p for p in editable if p.id == big), None)
             if big_pl is None:
                 raise UserFacingError("You can only split a playlist you own or collaborate on.")
+        if big_pl and chosen:
             result = analyze_split(lib().items(big_pl), [(p, lib().items(p)) for p in chosen])
         return render(request, "split.html", editable=editable, big=big_pl, targets=chosen,
                       target_ids={p.id for p in chosen}, result=result)

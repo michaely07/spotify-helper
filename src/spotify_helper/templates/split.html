@@ -4,9 +4,9 @@
 <h1>Split a big playlist</h1>
 <p class="sub">See which tracks in a big playlist are already in the playlists you pick, and clear those out.</p>
 <form method="get" class="card">
-  <p><label>Big playlist<br>{{ playlist_select(editable, "big", big) }}</label></p>
+  <p><label>Big playlist<br>{{ playlist_select(editable, "big", big, disables="targets") }}</label></p>
   <p>Look for its tracks in:</p>
-  {{ playlist_checklist(editable, "targets", target_ids, exclude=big.id if big else None) }}
+  {{ playlist_checklist(editable, "targets", target_ids, disabled_id=big.id if big else None) }}
   <div class="actions"><button class="btn">Analyze</button></div>
 </form>
 {% if result %}

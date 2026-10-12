@@ -156,3 +156,13 @@ def test_counts_are_current_even_while_spotify_playlist_list_lags(env):
 def test_pages_are_not_cached_by_the_browser(env):
     _, http = env
     assert "no-store" in http.get("/").headers.get("cache-control", "")
+
+
+def test_split_disables_the_big_playlist_in_the_target_list(env):
+    fake, http = env
+    fake.put(playlist("big", "Everything"), [])
+    fake.put(playlist("t1", "Chill"), [])
+    page = http.get("/split", params={"big": "big"}).text  # big chosen, no targets yet
+    assert re.search(r'<input[^>]*name="targets" value="big"[^>]*disabled', page)
+    assert not re.search(r'<input[^>]*name="targets" value="t1"[^>]*disabled', page)
+    assert 'data-disables="targets"' in page
